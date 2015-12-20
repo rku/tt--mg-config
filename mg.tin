@@ -4,23 +4,24 @@
 
 #var {character_name} {<YOUR CHARACTER's NAME>}
 #var {character_password} {<PASSWORD>}
-#var {tt_path} {/home/rene/.tintin/}
+#var {session_name} {Morgengrauen}
 
 /* basic setup */
 
 #config {256 colors} {on}
-#config {command echo} {cnt}
-#config {packet patch} {0.3}
+#config {command echo} {on}
+#config {packet patch} {0.5}
 #config {command color} {<bfb>}
 
 /* configure split window mode */
 
-#split 10 2
+#split 2 1
 
 /* create attribute bar */
 
-#var {report_regex} {^LP:{[ ]*}%1, KP:{[ ]*}%2, Gift:{[ ]*}%3.}
-#gag {$report_regex}
+#var    report_regex {^LP:{[ ]*}%1, KP:{[ ]*}%2, Gift:{[ ]*}%3.}
+#format attrib_bar { .: %s :.  <<069>%s<099>>} {$session_name} {$character_name}
+#gag    {$report_regex}
 #action {$report_regex}
 {
     #var {lp} {%1};
@@ -42,7 +43,10 @@
     #format kp_bar {<099>KP:%s%+3s<099>} {$col_kp} {$kp};
     #format ps_bar {<099>Gift: %s%s<099>} {$col_gift} {$gift};
 
-    #echo {{<069>$character_name<099> $lp_bar, $kp_bar, $ps_bar} {1}};
+    #format attrib_bar { .: %s :.  <<069>%s<099>>  %s  %s  %s}
+        {$session_name} {$character_name} {$lp_bar} {$kp_bar} {$ps_bar};
+
+    #echo {{$attrib_bar} {-1}};
 
     #unvar lp; #unvar kp; #unvar gift;
     #unvar col_lp; #unvar col_kp; #unvar col_gift;
@@ -52,10 +56,12 @@
 /* catch prompt */
 
 #var {last_line_was_prompt} {0}
+#var {prompt} {> }
 #event {RECEIVED PROMPT}
 {
-    #echo {{%1} {0}};
     #var {last_line_was_prompt} {1};
+    #var {prompt} {%1};
+    #echo {{$prompt} {0}};
     #line gag
 }
 
@@ -126,28 +132,28 @@
 #pathdir {nw} {so} {9}
 #pathdir {nordwesten} {suedosten} {9}
 
-#var currentmap {}
-#alias {savemap} {#map write {$currentmap}}
-#alias {switchmap}
+#alias {newmap}
 {
-    #if {"$currentmap" != ""} {savemap};
-    #format mapfile {%s/%s.map} {$tt_path} {%1};
+    #map destroy;
     #map create;
     #map goto 1;
-    #map read {$mapfile};
-    #map flag vtmap on;
-    #map return;
-    #var currentmap {$mapfile}
+    #map flag vtmap off;
 }
 #alias {undo} {#map undo}
-#event {SESSION CONNECTED} {switchmap %0}
-#event {SESSION DISCONNECTED} {savemap}
+
+/* handle screen resize  */
+
+#event {SCREEN RESIZE}
+{
+    #echo {{$attrib_bar} {-1}};
+    #echo {{$prompt} {0}};
+}
 
 /* finally, create session */
 
-#session {mg} {mg.mud.de} {4711};$character_name;$character_password
+#session {$session_name} {mg.mud.de} {4711};$character_name;$character_password
 
 /* init */
 
-#echo {{ } {1}}
-licht
+#echo {{ } {-1}}
+#echo {{$attrib_bar} {-1}}
