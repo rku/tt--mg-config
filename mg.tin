@@ -1,0 +1,153 @@
+#nop vim: filetype=tintin
+
+/* configuration */
+
+#var {character_name} {<YOUR CHARACTER's NAME>}
+#var {character_password} {<PASSWORD>}
+#var {tt_path} {/home/rene/.tintin/}
+
+/* basic setup */
+
+#config {256 colors} {on}
+#config {command echo} {cnt}
+#config {packet patch} {0.3}
+#config {command color} {<bfb>}
+
+/* configure split window mode */
+
+#split 10 2
+
+/* create attribute bar */
+
+#var {report_regex} {^LP:{[ ]*}%1, KP:{[ ]*}%2, Gift:{[ ]*}%3.}
+#gag {$report_regex}
+#action {$report_regex}
+{
+    #var {lp} {%1};
+    #var {kp} {%2};
+    #var {gift} {%3};
+
+    #var col_lp {<029>};
+    #if {$lp < 50} {#var col_lp {<039>}};
+    #if {$lp < 30} {#var col_lp {<019>}};
+
+    #var col_kp {<029>};
+    #if {$kp < 30} {#var col_kp {<039>}};
+    #if {$kp < 15} {#var col_kp {<019>}};
+
+    #var col_gift {<029>};
+    #if {"$gift" != "keins"} { #var col_gift {<519>} };
+
+    #format lp_bar {<099>LP:%s%+3s<099>} {$col_lp} {$lp};
+    #format kp_bar {<099>KP:%s%+3s<099>} {$col_kp} {$kp};
+    #format ps_bar {<099>Gift: %s%s<099>} {$col_gift} {$gift};
+
+    #echo {{<069>$character_name<099> $lp_bar, $kp_bar, $ps_bar} {1}};
+
+    #unvar lp; #unvar kp; #unvar gift;
+    #unvar col_lp; #unvar col_kp; #unvar col_gift;
+    #unvar lp_bar; #unvar kp_bar; #unvar ps_bar
+}
+
+/* catch prompt */
+
+#var {last_line_was_prompt} {0}
+#event {RECEIVED PROMPT}
+{
+    #echo {{%1} {0}};
+    #var {last_line_was_prompt} {1};
+    #line gag
+}
+
+/* gag newline after prompt */
+
+#event {RECEIVED LINE}
+{
+    #if {$last_line_was_prompt == 1}
+    {
+        #var line {%1};
+        #if {"$line" == ""} {#line gag};
+        #unvar line;
+        #var {last_line_was_prompt} {0}
+    }
+}
+
+/* configure highlighting */
+
+#highlight {^Du sagst: %*} {cyan}
+#highlight {^%1 sagt: %*} {cyan}
+#highlight {^Du fragst: %*} {cyan}
+#highlight {^%1 fragt: %*} {cyan}
+#highlight {^Du antwortest: %*} {cyan}
+#highlight {^%1 antwortet: %*} {cyan}
+#highlight {^%* ruft: %*} {orange}
+
+#highlight {^[%w:%*]%*} {cyan}
+#highlight {^%* teilt {.* und |}Dir {|und .*}mit:%*$} {orange}
+#highlight {^Du teilst %* mit:%*$} {orange}
+#highlight {^%*{Dein|Deine} {Freund|Freundin}%*$} {orange}
+#highlight {^%*aus der Ferne%*$} {orange}
+
+#highlight {^Es gibt %w sichtbaren Ausgang:%*} {light blue}
+#highlight {^Es gibt %w sichtbare Ausgaenge:%*} {light blue}
+
+/* add percentage to monster health status */
+
+#substitute {%* ist absolut fit.$} {<bfb>%0 (100%)}
+#substitute {%* ist {leicht geschwaecht|schon ein wenig|schwaecher|schon etwas geschwaecht}.$} {<ffb>%0 (90%)}
+#substitute {%* fuehlte sich {|heute }{|auch }schon besser.$} {<bfb>%0 (80%)}
+#substitute {%* {ist leicht|sieht ein wenig} {angekratzt|angeschlagen} {| aus}.$} {<bfb>%0 (70%)}
+#substitute {%* {ist (nicht mehr taufrisch|deutlich angekratzt}.$} {<ffb>%0 (60%)}
+#substitute {%* sieht nicht mehr taufrisch aus.$} {<ffb>%0 (60%)}
+#substitute {%* { wankt bereits bedenklich| schwankt und wankt}.$} {<ffb>%0 (40%)}
+#substitute {%* sieht recht mitgenommen aus.$} {<ffb>%0 (50%)}
+#substitute {%* macht einen mitgenommenen Eindruck.$} {<ffb>%0 (50%)}
+#substitute {%* { ist in keiner guten Verfassung|war auch schon mal deutlich besser drauf}.$} {<fbb>%0 (30%)}
+#substitute {%* braucht dringend {einen Arzt|aerztliche Behandlung}.$} {<fbb>%0 (20%)}
+#substitute {%* { steht auf der Schwelle des Todes| ist schon so gut wie bei Lars}.$} {<fbb>%0 (10%)}
+
+/* configure mapper */
+
+#pathdir {n} {s} {1}
+#pathdir {norden} {sueden} {1}
+#pathdir {o} {w} {2}
+#pathdir {osten} {westen} {2}
+#pathdir {s} {n} {4}
+#pathdir {sueden} {norden} {4}
+#pathdir {w} {o} {8}
+#pathdir {westen} {osten} {8}
+
+#pathdir {no} {sw} {3}
+#pathdir {nordosten} {suedwesten} {3}
+#pathdir {so} {nw} {6}
+#pathdir {suedosten} {nordwesten} {6}
+#pathdir {sw} {no} {12}
+#pathdir {suedwesten} {nordosten} {12}
+#pathdir {nw} {so} {9}
+#pathdir {nordwesten} {suedosten} {9}
+
+#var currentmap {}
+#alias {savemap} {#map write {$currentmap}}
+#alias {switchmap}
+{
+    #if {"$currentmap" != ""} {savemap};
+    #format mapfile {%s/%s.map} {$tt_path} {%1};
+    #map create;
+    #map goto 1;
+    #map read {$mapfile};
+    #map flag vtmap on;
+    #map return;
+    #var currentmap {$mapfile}
+}
+#alias {undo} {#map undo}
+#event {SESSION CONNECTED} {switchmap %0}
+#event {SESSION DISCONNECTED} {savemap}
+
+/* finally, create session */
+
+#session {mg} {mg.mud.de} {4711};$character_name;$character_password
+
+/* init */
+
+#echo {{ } {1}}
+licht
